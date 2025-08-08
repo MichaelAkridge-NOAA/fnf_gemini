@@ -1,0 +1,57 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Fish or No Fish? Game</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>body{font-family:'Inter',sans-serif;background-color:#f0f2f5;}#image-viewer{line-height:0;}#image-display{max-height:70vh;}.game-btn{transition:all .2s ease-in-out;}.game-btn:hover{transform:translateY(-2px);box-shadow:0 4px 12px rgba(0,0,0,.1);}.game-btn:disabled{cursor:not-allowed;opacity:.6;}</style>
+</head>
+<body class="text-gray-800 flex items-center justify-center min-h-screen p-4">
+    <div id="app" class="w-full max-w-6xl mx-auto p-4 sm:p-6 lg:p-8 bg-white rounded-2xl shadow-xl border border-gray-200">
+        <header class="text-center mb-6">
+            <h1 class="text-3xl sm:text-4xl font-bold text-gray-900 tracking-tight">🐟 Fish or No Fish? 🚫</h1>
+            <p class="text-base text-gray-500 mt-2">Is there a fish in the image? Make your guess!</p>
+        </header>
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <div class="lg:col-span-2">
+                <div id="image-viewer" class="relative w-full bg-gray-100 rounded-xl overflow-hidden border-2 border-gray-200 flex items-center justify-center">
+                    <img id="image-display" src="" alt="Game Image" class="w-full h-auto object-scale-down" crossorigin="anonymous">
+                    <canvas id="display-canvas" class="absolute top-0 left-0 w-full h-full"></canvas>
+                    <div id="initial-message" class="absolute inset-0 flex items-center justify-center p-4"><p class="text-gray-500 text-center">Loading game data...</p></div>
+                </div>
+                <div class="flex justify-between items-center mt-4">
+                    <button id="prev-btn" class="flex items-center justify-center bg-white border border-gray-300 text-gray-700 font-semibold py-2 px-4 rounded-lg shadow-sm hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"><svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M12.707 5.293a1 1 0 010 1.414L9.414 10l3.293 3.293a1 1 0 01-1.414 1.414l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 0z" clip-rule="evenodd" /></svg>Previous</button>
+                    <div id="status-bar" class="text-center text-sm text-gray-500"><p id="image-counter">Image 0 of 0</p><p id="image-name" class="truncate w-full font-mono"></p></div>
+                    <button id="next-btn" class="flex items-center justify-center bg-white border border-gray-300 text-gray-700 font-semibold py-2 px-4 rounded-lg shadow-sm hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors">Next<svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 ml-2" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clip-rule="evenodd" /></svg></button>
+                </div>
+            </div>
+            <div class="flex flex-col space-y-4">
+                <div class="bg-gray-50 p-4 rounded-lg border"><h2 class="text-lg font-semibold mb-3 text-gray-800">Your Guess</h2><div class="grid grid-cols-2 gap-3"><button id="fish-btn" data-choice="yes" class="game-btn flex items-center justify-center text-lg bg-blue-500 text-white font-bold py-4 px-4 rounded-lg shadow-md hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">🐟 Fish</button><button id="no-fish-btn" data-choice="no" class="game-btn flex items-center justify-center text-lg bg-red-500 text-white font-bold py-4 px-4 rounded-lg shadow-md hover:bg-red-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500">🚫 No Fish</button></div></div>
+                <div id="feedback-panel" class="p-4 rounded-lg border text-center font-semibold text-lg hidden"></div>
+                <div class="bg-gray-50 p-4 rounded-lg border flex-grow"><h2 class="text-lg font-semibold mb-3 text-gray-800">Scoreboard</h2><div id="stats-panel" class="space-y-2 text-base"><div class="flex justify-between items-center"><span class="font-medium text-gray-600">🎯 Correct:</span><span id="correct-count" class="font-bold text-green-600 text-xl">0</span></div><div class="flex justify-between items-center"><span class="font-medium text-gray-600">❌ Incorrect:</span><span id="incorrect-count" class="font-bold text-red-600 text-xl">0</span></div><div class="flex justify-between items-center pt-2 border-t mt-2"><span class="font-semibold text-gray-800">🏆 Score:</span><span id="score" class="font-bold text-indigo-600 text-xl">0</span></div></div></div>
+            </div>
+        </div>
+    </div>
+    <script>
+        const BUCKET_NAME = 'nmfs_odp_pifsc';
+        const GCS_BASE_URL = `https://storage.googleapis.com/${BUCKET_NAME}/`;
+        const COLORS=['#3b82f6','#ef4444','#22c55e','#f97316','#a855f7','#6366f1'];
+        let verdictsData={};let currentIndex=-1;let isRoundOver=!1;let score=0;let correctCount=0;let incorrectCount=0;
+        const imageDisplay=document.getElementById('image-display'),canvas=document.getElementById('display-canvas'),ctx=canvas.getContext('2d'),prevBtn=document.getElementById('prev-btn'),nextBtn=document.getElementById('next-btn'),fishBtn=document.getElementById('fish-btn'),noFishBtn=document.getElementById('no-fish-btn'),imageCounter=document.getElementById('image-counter'),imageNameEl=document.getElementById('image-name'),initialMessage=document.getElementById('initial-message'),feedbackPanel=document.getElementById('feedback-panel'),scoreEl=document.getElementById('score'),correctCountEl=document.getElementById('correct-count'),incorrectCountEl=document.getElementById('incorrect-count');
+        function clearCanvas(){ctx.clearRect(0,0,canvas.width,canvas.height)}
+        function drawOnCanvas(){const rect=imageDisplay.getBoundingClientRect();canvas.width=rect.width;canvas.height=rect.height;clearCanvas();const verdict=verdictsData.verdicts[currentIndex];if(!verdict||!verdict.detections)return;verdict.detections.forEach((detection,index)=>{if(detection.box_normalized){const[ymin,xmin,ymax,xmax]=detection.box_normalized,x=xmin*canvas.width,y=ymin*canvas.height,w=(xmax-xmin)*canvas.width,h=(ymax-ymin)*canvas.height,color=COLORS[index%COLORS.length];ctx.strokeStyle=color;ctx.lineWidth=4;ctx.strokeRect(x,y,w,h);ctx.fillStyle=color;ctx.font='bold 16px Inter';const label=detection.label||'fish',textWidth=ctx.measureText(label).width;ctx.fillRect(x,y-20,textWidth+10,20);ctx.fillStyle='white';ctx.fillText(label,x+5,y-5)}})}
+        function updateScoreboard(){scoreEl.textContent=score;correctCountEl.textContent=correctCount;incorrectCountEl.textContent=incorrectCount}
+        function handleUserChoice(userChoice){if(isRoundOver)return;isRoundOver=!0;fishBtn.disabled=!0;noFishBtn.disabled=!0;const verdict=verdictsData.verdicts[currentIndex],isCorrect=userChoice===verdict.fish_present;feedbackPanel.classList.remove('hidden');if(isCorrect){score+=10;correctCount++;feedbackPanel.textContent="Correct! 🎉";feedbackPanel.className='p-4 rounded-lg border text-center font-semibold text-lg bg-green-100 text-green-800 border-green-300'}else{score-=5;incorrectCount++;const modelAnswer=verdict.fish_present==='yes'?"found a fish":"did not find a fish";feedbackPanel.textContent=`Incorrect. The model ${modelAnswer}.`;feedbackPanel.className='p-4 rounded-lg border text-center font-semibold text-lg bg-red-100 text-red-800 border-red-300'}
+        if(verdict.fish_present==='yes'){drawOnCanvas()}updateScoreboard();setTimeout(()=>{showImage(currentIndex+1)},2500)}
+        function showImage(index){const numImages=verdictsData.verdicts.length;if(index>=numImages){index=0}if(index<0){index=numImages-1}
+        currentIndex=index;isRoundOver=!1;clearCanvas();feedbackPanel.classList.add('hidden');const verdict=verdictsData.verdicts[currentIndex],imageName=verdict.image_file;imageDisplay.src=GCS_BASE_URL+imageName;imageCounter.textContent=`Image ${currentIndex+1} of ${numImages}`;imageNameEl.textContent=imageName.split('/').pop();prevBtn.disabled=!1;nextBtn.disabled=!1;fishBtn.disabled=!1;noFishBtn.disabled=!1}
+        async function initialize(){try{const response=await fetch('verdicts.json');if(!response.ok)throw new Error('Could not load verdicts.json');verdictsData=await response.json();if(verdictsData.verdicts&&verdictsData.verdicts.length>0){initialMessage.classList.add('hidden');showImage(0);updateScoreboard()}else{initialMessage.textContent="No image data found in verdicts.json."}}catch(error){console.error("Initialization failed:",error);initialMessage.textContent=`Error: ${error.message}`}}
+        fishBtn.addEventListener('click',()=>handleUserChoice('yes'));noFishBtn.addEventListener('click',()=>handleUserChoice('no'));prevBtn.addEventListener('click',()=>showImage(currentIndex-1));nextBtn.addEventListener('click',()=>showImage(currentIndex+1));window.addEventListener('resize',drawOnCanvas);imageDisplay.addEventListener('load',()=>{drawOnCanvas()});initialize();
+    </script>
+</body>
+</html>
